@@ -17,6 +17,18 @@ export async function POST(req: Request) {
   try {
     const { amount, name, email, phone, orderId } = await req.json()
 
+    // Check if Razorpay is configured
+    const id = process.env.RAZORPAY_KEY_ID
+    const secret = process.env.RAZORPAY_KEY_SECRET
+    
+    if (!id || !secret || id === 'rzp_test_YOUR_KEY_ID' || secret === 'YOUR_KEY_SECRET') {
+      console.log('⚠️ Razorpay not configured - skipping payment link generation')
+      return NextResponse.json(
+        { ok: false, error: "Payment gateway not configured. Please add Razorpay credentials." },
+        { status: 200 } // Return 200 so checkout still succeeds
+      )
+    }
+
     // Validate required fields
     if (!amount || amount <= 0) {
       return NextResponse.json(
