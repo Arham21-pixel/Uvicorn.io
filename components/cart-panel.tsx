@@ -1,11 +1,14 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { Button as StatefulButton } from "@/components/ui/stateful-button"
 import { Input } from "@/components/ui/input"
 import { useCart } from "@/hooks/use-cart"
+import { useOrders } from "@/hooks/use-orders"
 import { formatINR } from "@/lib/currency"
 import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
 
 export default function CartPanel({
   open,
@@ -15,62 +18,82 @@ export default function CartPanel({
   onOpenChange: (v: boolean) => void
 }) {
   const { items, subtotal, tax, total, removeItem, updateQuantity, clear } = useCart()
+  const { addOrder } = useOrders()
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
+  const router = useRouter()
 
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)
 
   const onCheckout = async () => {
     if (!isValidEmail(email)) {
       toast({ title: "Invalid email", description: "Please enter a valid email address." })
-      return
+      throw new Error("Invalid email");
     }
-    if (items.length === 0) return
+    if (items.length === 0) {
+      throw new Error("Cart is empty");
+    }
 
-    setLoading(true)
-    try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          cart: {
-            items: items.map((it) => ({
-              product: it.product,
-              quantity: it.quantity,
-            })),
-          },
-          amounts: { subtotal, tax, total },
-        }),
-      })
-      if (!res.ok) throw new Error("Checkout failed")
-      const data = await res.json()
-      console.log("📧 EMAIL DEBUG:", data) // Debug info
-      
-      const buyerMsg = data.emailed
-        ? `✅ Buyer email sent to ${email}`
-        : data.emailSimulated
-          ? `⚠️ Buyer email simulated: ${data.note || "Check API key"}`
-          : `❌ Buyer email failed: ${data.note || "Unknown error"}`
-      
-      const adminMsg = data.emailedOwner
-        ? `✅ Admin email sent to uvicornshoppie@gmail.com`
-        : data.ownerSimulated
-          ? `⚠️ Admin email simulated: ${data.ownerNote || "Check API key"}`
-          : `❌ Admin email failed: ${data.ownerNote || "Unknown error"}`
-      
-      toast({
-        title: "Order placed",
-        description: `Order #${data.orderId} confirmed.\n${buyerMsg}\n${adminMsg}`,
-      })
+    const res = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        cart: {
+          items: items.map((it) => ({
+            product: it.product,
+            quantity: it.quantity,
+          })),
+        },
+        amounts: { subtotal, tax, total },
+      }),
+    })
+    if (!res.ok) throw new Error("Checkout failed")
+    const data = await res.json()
+    console.log("📧 EMAIL DEBUG:", data) // Debug info
+    
+    const buyerMsg = data.emailed
+      ? `✅ Buyer email sent to ${email}`
+      : data.emailSimulated
+        ? `⚠️ Buyer email simulated: ${data.note || "Check API key"}`
+        : `❌ Buyer email failed: ${data.note || "Unknown error"}`
+    
+    const adminMsg = data.emailedOwner
+      ? `✅ Admin email sent to uvicornshoppie@gmail.com`
+      : data.ownerSimulated
+        ? `⚠️ Admin email simulated: ${data.ownerNote || "Check API key"}`
+        : `❌ Admin email failed: ${data.ownerNote || "Unknown error"}`
+    
+    // Save order to history
+    addOrder({
+      orderId: data.orderId,
+      items: items.map(it => ({
+        product: it.product,
+        quantity: it.quantity
+      })),
+      email,
+      subtotal,
+      tax,
+      total
+    })
+    
+    // Check if payment link was generated
+    if (data.paymentLink) {
+      // Redirect to payment page with payment link and order details
+      const paymentUrl = `/payment?link=${encodeURIComponent(data.paymentLink)}&orderId=${data.orderId}&amount=${total}`
       clear()
       onOpenChange(false)
-    } catch (err: any) {
-      toast({ title: "Checkout error", description: err?.message ?? "Something went wrong." })
-    } finally {
-      setLoading(false)
+      router.push(paymentUrl)
+      return
     }
+    
+    toast({
+      title: "Order placed",
+      description: `Order #${data.orderId} confirmed.\n${buyerMsg}\n${adminMsg}`,
+    })
+    clear()
+    onOpenChange(false)
   }
 
   return (
@@ -172,9 +195,9 @@ export default function CartPanel({
             <Button variant="ghost" onClick={clear}>
               Clear
             </Button>
-            <Button onClick={onCheckout} disabled={items.length === 0 || loading || !isValidEmail(email)}>
-              {loading ? "Processing..." : "Checkout"}
-            </Button>
+            <StatefulButton onClick={onCheckout} disabled={items.length === 0 || !isValidEmail(email)}>
+              Checkout
+            </StatefulButton>
           </div>
         </div>
       </div>

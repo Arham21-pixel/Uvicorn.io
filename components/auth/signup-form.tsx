@@ -8,19 +8,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 
-type LoginFormProps = {
-  onSuccessRedirectTo?: string;
-  className?: string;
-  showSignUpHint?: boolean;
-  footer?: React.ReactNode;
-};
-
-export default function LoginForm({
-  onSuccessRedirectTo = "/",
-  className,
-  showSignUpHint = true,
-  footer,
-}: LoginFormProps) {
+export function SignupFormDemo() {
   const supabase = createClient();
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -28,28 +16,34 @@ export default function LoginForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function onSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo:
+          (process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL as string) ||
+          (typeof window !== "undefined" ? window.location.origin : undefined),
+      },
+    });
     setLoading(false);
     if (error) return setError(error.message);
-
-    // Direct redirect without signed_in query and loader trigger
-    router.push(onSuccessRedirectTo);
-  }
+    router.push("/auth/login");
+  };
 
   return (
-    <div className={cn("shadow-input mx-auto w-full max-w-md rounded-none bg-white p-4 md:rounded-2xl md:p-8 dark:bg-black", className)}>
+    <div className="shadow-input mx-auto w-full max-w-md rounded-none bg-white p-4 md:rounded-2xl md:p-8 dark:bg-black">
       <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-200">
-        Welcome back to Uvicorn
+        Welcome to Uvicorn
       </h2>
       <p className="mt-2 max-w-sm text-sm text-neutral-600 dark:text-neutral-300">
-        Sign in to your account to continue shopping
+        Create your account to start shopping with us
       </p>
 
-      <form className="my-8" onSubmit={onSubmit} aria-label="Sign in form">
+      <form className="my-8" onSubmit={handleSubmit}>
         <LabelInputContainer className="mb-4">
           <Label htmlFor="email">Email Address</Label>
           <Input
@@ -71,7 +65,7 @@ export default function LoginForm({
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
+            autoComplete="new-password"
           />
         </LabelInputContainer>
 
@@ -81,25 +75,20 @@ export default function LoginForm({
           className="group/btn relative block h-10 w-full rounded-md bg-gradient-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset] disabled:opacity-50 disabled:cursor-not-allowed"
           type="submit"
           disabled={loading}
-          aria-label="Sign in"
         >
-          {loading ? "Signing in..." : "Sign in →"}
+          {loading ? "Creating account..." : "Sign up →"}
           <BottomGradient />
         </button>
 
-        {showSignUpHint && (
-          <p className="mt-6 text-center text-sm text-neutral-600 dark:text-neutral-400">
-            Don't have an account?{" "}
-            <Link
-              href="/auth/sign-up"
-              className="text-neutral-800 underline dark:text-neutral-200"
-            >
-              Sign up
-            </Link>
-          </p>
-        )}
-
-        {footer && <div className="mt-4">{footer}</div>}
+        <p className="mt-6 text-center text-sm text-neutral-600 dark:text-neutral-400">
+          Already have an account?{" "}
+          <Link
+            href="/auth/login"
+            className="text-neutral-800 underline dark:text-neutral-200"
+          >
+            Sign in
+          </Link>
+        </p>
       </form>
     </div>
   );

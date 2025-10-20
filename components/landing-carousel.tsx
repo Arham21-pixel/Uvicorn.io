@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import * as React from "react"
+import { motion } from "motion/react"
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel"
 import LoginForm from "@/components/auth/login-form"
 import Link from "next/link"
@@ -21,53 +22,68 @@ export default function LandingCarousel() {
   }, [api, params])
 
   return (
-    <main className="min-h-dvh flex items-center justify-center px-4">
+    <main className="min-h-dvh flex items-center justify-center px-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-neutral-900 dark:to-neutral-950">
       <div className="relative w-full max-w-4xl">
         <Carousel className="w-full" setApi={setApi}>
           <CarouselContent>
             <CarouselItem>
               <section className="rounded-md border bg-card text-card-foreground p-8">
                 <div className="flex flex-col items-center text-center gap-4">
-                  <img src="/brand/uvicorn-logo.jpg" alt="Uvicorn logo" className="h-16 w-16 rounded-md" />
+                  <motion.img 
+                    src="/brand/uvicorn-logo.jpg" 
+                    alt="Uvicorn logo" 
+                    className="h-16 w-16 rounded-md" 
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ 
+                      type: "spring", 
+                      stiffness: 260, 
+                      damping: 20,
+                      duration: 0.8 
+                    }}
+                    whileHover={{ scale: 1.15, rotate: 10 }}
+                  />
                   <div>
-                    <h1 className="text-3xl font-semibold text-balance">Uvicorn</h1>
-                    <p className="mt-2 text-sm text-muted-foreground">Fast, reliable shopping.</p>
+                    <motion.h1 
+                      className="text-3xl font-semibold text-balance bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent"
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3, duration: 0.8 }}
+                    >
+                      Uvicorn
+                    </motion.h1>
+                    <motion.p 
+                      className="mt-2 text-sm text-muted-foreground"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.5, duration: 0.8 }}
+                    >
+                      Fast, reliable shopping.
+                    </motion.p>
                   </div>
-                  <div className="mt-2 flex items-center gap-3">
+                  <motion.div 
+                    className="mt-2 flex items-center gap-3"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.7, duration: 0.8 }}
+                  >
                     <Button onClick={() => api?.scrollTo(1)}>Sign in</Button>
                     <Button variant="outline" asChild>
                       <Link href="/auth/sign-up">Create account</Link>
                     </Button>
-                  </div>
+                  </motion.div>
                 </div>
               </section>
             </CarouselItem>
 
             <CarouselItem>
               <section>
-                <Card className="w-full">
-                  <CardHeader>
-                    <CardTitle className="text-center">Sign in to Uvicorn</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <LoginForm
-                      onSuccessRedirectTo="/"
-                      footer={
-                        <p className="text-sm text-muted-foreground text-center">
-                          New here?{" "}
-                          <Link className="underline" href="/auth/sign-up">
-                            Create an account
-                          </Link>
-                        </p>
-                      }
-                    />
-                    <div className="mt-4 flex justify-center">
-                      <Button variant="ghost" size="sm" onClick={() => api?.scrollTo(0)}>
-                        Back to start
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                <LoginForm onSuccessRedirectTo="/" showSignUpHint={true} />
+                <div className="mt-4 flex justify-center">
+                  <Button variant="ghost" size="sm" onClick={() => api?.scrollTo(0)}>
+                    Back to start
+                  </Button>
+                </div>
               </section>
             </CarouselItem>
 

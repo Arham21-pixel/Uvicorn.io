@@ -223,6 +223,39 @@ export async function POST(req: Request) {
       }
     }
 
+    // Generate Razorpay payment link
+    let paymentLink: string | undefined
+    let paymentLinkId: string | undefined
+    let paymentError: string | undefined
+
+    try {
+      const paymentResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/create-payment-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: amounts.total,
+          name: recipientEmail.split('@')[0], // Use email username as name
+          email: recipientEmail,
+          phone: "", // Optional: can add phone field to checkout form
+          orderId
+        })
+      })
+
+      const paymentData = await paymentResponse.json()
+      
+      if (paymentData.ok) {
+        paymentLink = paymentData.link
+        paymentLinkId = paymentData.paymentLinkId
+        console.log('💳 Payment link generated:', paymentLink)
+      } else {
+        paymentError = paymentData.error
+        console.error('❌ Payment link generation failed:', paymentError)
+      }
+    } catch (err) {
+      paymentError = (err as Error)?.message || 'Unknown error'
+      console.error('❌ Payment link creation error:', paymentError)
+    }
+
     return NextResponse.json({
       orderId,
       emailed,
@@ -234,6 +267,9 @@ export async function POST(req: Request) {
       ownerSimulated,
       ownerNote,
       ownerRecipient: ownerEmailNormalized,
+      paymentLink,
+      paymentLinkId,
+      paymentError,
     })
   } catch (e) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 })
